@@ -9,9 +9,11 @@ import (
 )
 
 type Config struct {
-	Env          string                   `yaml:"env" env:"ENV" env-required:"true"`
-	Storage_Path string                   `yaml:"storage_path" env-required:"true"`
-	HTTPServer   struct{ Address string } `yaml:"http_server"`
+	Env          string `yaml:"env" env:"ENV" env-required:"true"`
+	Storage_Path string `yaml:"storage_path" env-required:"true"`
+	HTTPServer   struct {
+		Addr string `yaml:"address" env-required:"true"`
+	} `yaml:"http_server"`
 }
 
 func MustLoad() *Config {
