@@ -86,3 +86,28 @@ func GetAll(storage storage.Storage) http.HandlerFunc {
 		response.WriteJson(w, http.StatusOK, students)
 	}
 }
+
+func DeleteById(storage storage.Storage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		slog.Info("deleting student", slog.String("userId", id))
+
+		intId, err := strconv.ParseInt(id, 10, 64)
+		if err != nil {
+			response.WriteJson(w, http.StatusBadRequest, response.GeneralError(fmt.Errorf("Invalid id")))
+			return
+		}
+
+		err = storage.DeleteStudentById(intId)
+		if err != nil {
+			if err.Error() == fmt.Sprintf("student with id %d does not exist", intId) {
+				response.WriteJson(w, http.StatusBadRequest, response.GeneralError(err))
+				return
+			}
+			response.WriteJson(w, http.StatusInternalServerError, response.GeneralError(err))
+			return
+		}
+
+		response.WriteJson(w, http.StatusOK, map[string]string{ "msg": fmt.Sprintf("User with id %s deleted successfully", id)})
+	}
+}
