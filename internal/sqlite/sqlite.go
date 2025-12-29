@@ -128,3 +128,48 @@ func (s *SQLite) DeleteStudentById(id int64) error {
 
 	return nil
 }
+
+func (s *SQLite) UpdateStudentById(id int64, updatedStudent types.Student) error {
+	getStmt, err := s.Db.Prepare(`SELECT id, name, email, age FROM students WHERE id = ? LIMIT 1`)
+	if err != nil {
+		return err
+	}
+
+	defer getStmt.Close()
+	var student types.Student
+	err = getStmt.QueryRow(id).Scan(&student.Id, &student.Name, &student.Email, &student.Age)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("student with id %d does not exist", id)
+		}
+		return err
+	}
+
+	updateStmt, err := s.Db.Prepare(`
+	UPDATE students
+	SET name = ?, email = ?, age = ?
+	WHERE id = ?
+	`)
+	if err != nil {
+		return err
+	}
+
+	defer updateStmt.Close()
+
+	if updatedStudent.Age != 0 {
+		student.Age = updatedStudent.Age
+	}
+	if updatedStudent.Email != "" {
+		student.Email = updatedStudent.Email
+	}
+	if updatedStudent.Name != "" {
+		student.Name = updatedStudent.Name
+	}
+
+	_, err = updateStmt.Exec(student.Name, student.Email, student.Age, id)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

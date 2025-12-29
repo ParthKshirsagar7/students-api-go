@@ -23,7 +23,7 @@ func New(storage storage.Storage) http.HandlerFunc {
 
 		err := json.NewDecoder(r.Body).Decode(&student)
 		if errors.Is(err, io.EOF) {
-			response.WriteJson(w, http.StatusBadRequest, response.GeneralError(fmt.Errorf("empty body")))
+			response.WriteJson(w, http.StatusBadRequest, response.GeneralError(fmt.Errorf("empty request body")))
 			return
 		}
 
@@ -109,5 +109,47 @@ func DeleteById(storage storage.Storage) http.HandlerFunc {
 		}
 
 		response.WriteJson(w, http.StatusOK, map[string]string{ "msg": fmt.Sprintf("User with id %s deleted successfully", id)})
+	}
+}
+
+func UpdateById(storage storage.Storage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		slog.Info("updating user", slog.String("id", id))
+
+		intId, err := strconv.ParseInt(id, 10, 64)
+		if err != nil {
+			response.WriteJson(w, http.StatusBadRequest, response.GeneralError(fmt.Errorf("Invalid id")))
+			return
+		}
+
+		var updatedStudentInfo types.Student
+		
+		err = json.NewDecoder(r.Body).Decode(&updatedStudentInfo)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				response.WriteJson(w, http.StatusBadRequest, response.GeneralError(fmt.Errorf("empty request body")))
+				return
+			}
+
+			response.WriteJson(w, http.StatusBadRequest, response.GeneralError(err))
+		}
+
+		if updatedStudentInfo.Age == 0 && updatedStudentInfo.Email == "" && updatedStudentInfo.Name == "" {
+			response.WriteJson(w, http.StatusBadRequest, response.GeneralError(fmt.Errorf("atleast one field needs to be given to be updated")))
+			return
+		}
+
+		err = storage.UpdateStudentById(intId, updatedStudentInfo)
+		if err != nil {
+			if err.Error() == fmt.Sprintf("student with id %d does not exist", intId) {
+				response.WriteJson(w, http.StatusBadRequest, response.GeneralError(err))
+				return
+			}
+			response.WriteJson(w, http.StatusInternalServerError, response.GeneralError(err))
+			return
+		}
+
+		response.WriteJson(w, http.StatusOK, map[string]string{ "msg": "student updated successfully"})
 	}
 }
